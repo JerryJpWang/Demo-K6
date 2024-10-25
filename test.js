@@ -1,47 +1,53 @@
-import http from 'k6/http';
-import { sleep, check } from 'k6';
+import http from "k6/http";
+import { check } from "k6";
 
-const BASE_URL = 'https://ithelp.ithome.com.tw/articles/10358917';
+const BASE_URL = "https://ithelp.ithome.com.tw/articles/";
+
+const articles = [
+  "10358917",
+  "10356377",
+  "10358135"
+];
 
 const proxies = [
-  '109.195.113.65:8080',
-  '191.102.248.5:8085',
-  '193.233.84.77:1080',
-  '202.154.19.7:8080',
-  '115.127.98.18:58080',
-  '152.32.77.213:8095',
-  '114.130.153.46:58080',
-  '157.66.85.32:8080',
-  '103.105.55.207:8999',
-  '27.147.175.115:8080',
-  '131.100.51.161:999',
-  '101.255.165.217:8080',
-  '68.178.168.41:80',
-  '89.221.215.128:80',
-  '202.61.204.51:80',
-  '211.251.236.253:80',
-  '202.6.233.133:80',
-  '178.128.200.87:80',
-  '51.195.40.90:80',
-  '209.97.150.167:3128',
-  '155.94.241.132:3128',
-  '146.59.202.70:80',
-  '67.43.228.254:2679',
-  '211.234.125.3:443',
-  '103.189.250.89:8090',
-  '103.178.42.29:8181',
-  '14.142.36.210:1111',
-  '103.175.240.87:8080',
-  '113.192.31.5:1111',
-  '191.37.4.218:8085',
-  '103.231.239.137:58080',
-  '177.93.46.187:999',
-  '186.180.66.138:8080',
-  '185.49.96.36:8080',
-  '134.209.29.120:3128',
-  '188.166.197.129:3128',
-  '67.43.236.22:22079',
-  '67.43.236.20:10145'
+  "109.195.113.65:8080",
+  "191.102.248.5:8085",
+  "193.233.84.77:1080",
+  "202.154.19.7:8080",
+  "115.127.98.18:58080",
+  "152.32.77.213:8095",
+  "114.130.153.46:58080",
+  "157.66.85.32:8080",
+  "103.105.55.207:8999",
+  "27.147.175.115:8080",
+  "131.100.51.161:999",
+  "101.255.165.217:8080",
+  "68.178.168.41:80",
+  "89.221.215.128:80",
+  "202.61.204.51:80",
+  "211.251.236.253:80",
+  "202.6.233.133:80",
+  "178.128.200.87:80",
+  "51.195.40.90:80",
+  "209.97.150.167:3128",
+  "155.94.241.132:3128",
+  "146.59.202.70:80",
+  "67.43.228.254:2679",
+  "211.234.125.3:443",
+  "103.189.250.89:8090",
+  "103.178.42.29:8181",
+  "14.142.36.210:1111",
+  "103.175.240.87:8080",
+  "113.192.31.5:1111",
+  "191.37.4.218:8085",
+  "103.231.239.137:58080",
+  "177.93.46.187:999",
+  "186.180.66.138:8080",
+  "185.49.96.36:8080",
+  "134.209.29.120:3128",
+  "188.166.197.129:3128",
+  "67.43.236.22:22079",
+  "67.43.236.20:10145",
 ];
 
 const userAgents = [
@@ -77,37 +83,42 @@ const userAgents = [
 
   // Smart TVs
   "Mozilla/5.0 (SMART-TV; Linux; Tizen 2.4.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/2.4.0 TV Safari/538.1",
-  "Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.34 Safari/537.36 WebAppManager"
+  "Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.34 Safari/537.36 WebAppManager",
 ];
-
 
 export const options = {
   scenarios: {
-    ramp_up_scenario: {
-      executor: 'ramping-vus',
-      startVUs: 0,
-      stages: [
-        { duration: '2s', target: 5 },
-      ],
+    constant_request_scenario: {
+      executor: "constant-arrival-rate",
+      rate: 2,
+      timeUnit: "30s",
+      duration: "4h",
+      preAllocatedVUs: 1,
+      maxVUs: 2,
     },
   },
 };
 
 export default function () {
   const userAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
-  const proxy = proxies[Math.floor(Math.random() * proxies.length)];
-
+  const proxy = proxies[Math.floor(Math.random() * proxies.length)]; 
+  const articleId = articles[Math.floor(Math.random() * articles.length)];
+  const articleUrl = `${BASE_URL}${articleId}`;
 
   const params = {
     headers: {
-      'User-Agent': userAgent,
+      "User-Agent": userAgent,
     },
     proxy: proxy,
   };
 
-  const res = http.get(BASE_URL, params);
+  const res = http.get(articleUrl, params);
 
-  check(res, { 'status is 200': (r) => r.status === 200 });
+  check(res, { "status is 200": (r) => r.status === 200 });
 
-  sleep(0.5);  // Simulate a pause between requests
+  // to utc+8 timezone
+  const timeStamp = new Date().toLocaleString("en-US", { timeZone: "Asia/Taipei" });
+
+  console.log(`Request completed - Proxy: ${proxy}, User-Agent: ${userAgent.substring(0, 30)}..., Status: ${res.status}, Time: ${timeStamp}, Article: ${articleId}`);
+
 }
